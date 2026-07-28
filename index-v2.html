@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>물리학Ⅰ - 포탄 운동 시뮬레이터 (포물선 운동)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 12px;
+        }
+        header {
+            width: 100%;
+            max-width: 960px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.4rem;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        p.subtitle {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .main-container {
+            width: 100%;
+            max-width: 960px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .control-panel {
+            padding: 14px 18px;
+            background-color: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 200px;
+        }
+        .control-group label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #334155;
+            white-space: nowrap;
+        }
+        .control-group input[type=range] {
+            flex: 1;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+        .val-badge {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #2563eb;
+            background: #dbeafe;
+            padding: 2px 8px;
+            border-radius: 6px;
+            min-width: 55px;
+            text-align: center;
+        }
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background-color: #2563eb;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+        .btn-primary:hover { background-color: #1d4ed8; }
+        .btn-secondary {
+            background-color: #64748b;
+            color: #ffffff;
+        }
+        .btn-secondary:hover { background-color: #475569; }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            background-color: #ffffff;
+            touch-action: none;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .dashboard {
+            padding: 14px;
+            background-color: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 10px;
+        }
+        .card {
+            background: #ffffff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .card-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+        .card-vx { border-left: 4px solid #ea580c; }
+        .card-vy { border-left: 4px solid #9333ea; }
+        .card-hmax { border-left: 4px solid #16a34a; }
+        .card-range { border-left: 4px solid #0284c7; }
+        .card-time { border-left: 4px solid #dc2626; }
+
+        .card-vx .card-title { color: #ea580c; }
+        .card-vy .card-title { color: #9333ea; }
+        .card-hmax .card-title { color: #16a34a; }
+        .card-range .card-title { color: #0284c7; }
+        .card-time .card-title { color: #dc2626; }
+
+        .card-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .card-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .instructions {
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #475569;
+            background-color: #eff6ff;
+            text-align: center;
+            border-top: 1px solid #dbeafe;
+        }
+
+        @media (max-width: 600px) {
+            .canvas-container { height: 340px; }
+            h1 { font-size: 1.2rem; }
+            .control-panel { padding: 10px; gap: 10px; }
+            .btn { font-size: 0.8rem; padding: 6px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚀 비스듬히 던진 물체의 운동 (포물선 운동)</h1>
+        <p class="subtitle">물리학Ⅰ 인터랙티브 탐구 시뮬레이터 (중력가속도 g = 9.8 m/s²)</p>
+    </header>
+
+    <div class="main-container">
+        <div class="control-panel">
+            <div class="control-group">
+                <label for="v0-slider">초기 속도 (v₀):</label>
+                <input type="range" id="v0-slider" min="5" max="50" value="30" step="1">
+                <span class="val-badge" id="v0-val">30 m/s</span>
+            </div>
+            <div class="control-group">
+                <label for="angle-slider">발사 각도 (θ):</label>
+                <input type="range" id="angle-slider" min="10" max="80" value="45" step="1">
+                <span class="val-badge" id="angle-val">45°</span>
+            </div>
+            <div class="btn-group">
+                <button id="btn-fire" class="btn btn-primary" onclick="toggleFire()">발사 / 일시정지</button>
+                <button id="btn-reset" class="btn btn-secondary" onclick="resetSim()">리셋</button>
+            </div>
+        </div>
+
+        <div class="canvas-container" id="canvas-container">
+            <canvas id="simCanvas"></canvas>
+        </div>
+
+        <div class="instructions">
+            💡 <strong>사용 방법:</strong> 슬라이더로 초기 속도와 각도를 설정하고 [발사] 버튼을 누르세요. 시뮬레이션 중 수평/연직 속도 성분 변화와 최고점, 수평 도달 거리를 확인해 보세요.
+        </div>
+
+        <div class="dashboard" id="dashboard">
+            <!-- Dynamic Values -->
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+
+        const g = 9.8; // 중력가속도 (m/s^2)
+        
+        let v0 = 30;     // 초기 속도 (m/s)
+        let angleDeg = 45; // 발사 각도 (deg)
+        let isRunning = false;
+        let simTime = 0;   // 경과 시간 (s)
+        let animationFrameId = null;
+        let lastTimestamp = null;
+
+        let width, height;
+        let originX = 60;
+        let originY = 350;
+        let scale = 3.5; // 1m = 3.5px
+
+        // Controls
+        const v0Slider = document.getElementById('v0-slider');
+        const angleSlider = document.getElementById('angle-slider');
+        const v0Val = document.getElementById('v0-val');
+        const angleVal = document.getElementById('angle-val');
+        const btnFire = document.getElementById('btn-fire');
+
+        v0Slider.addEventListener('input', (e) => {
+            v0 = parseFloat(e.target.value);
+            v0Val.textContent = `${v0} m/s`;
+            if (!isRunning) resetSim();
+        });
+
+        angleSlider.addEventListener('input', (e) => {
+            angleDeg = parseFloat(e.target.value);
+            angleVal.textContent = `${angleDeg}°`;
+            if (!isRunning) resetSim();
+        });
+
+        function resizeCanvas() {
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            
+            originX = 50;
+            originY = height - 50;
+            
+            // Auto scale based on expected max distance
+            const maxR = (50 * 50) / g; // ~255m max
+            scale = (width - 100) / maxR;
+            if (scale < 1.5) scale = 1.5;
+
+            draw();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function toggleFire() {
+            const rad = angleDeg * Math.PI / 180;
+            const tTotal = (2 * v0 * Math.sin(rad)) / g;
+
+            if (simTime >= tTotal) {
+                simTime = 0;
+            }
+
+            isRunning = !isRunning;
+            btnFire.textContent = isRunning ? '일시정지' : '발사';
+
+            if (isRunning) {
+                lastTimestamp = performance.now();
+                animate();
+            } else {
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            }
+        }
+
+        function resetSim() {
+            isRunning = false;
+            btnFire.textContent = '발사';
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            simTime = 0;
+            draw();
+        }
+
+        function animate(timestamp) {
+            if (!isRunning) return;
+
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = (timestamp - lastTimestamp) / 1000; // sec
+            lastTimestamp = timestamp;
+
+            const rad = angleDeg * Math.PI / 180;
+            const tTotal = (2 * v0 * Math.sin(rad)) / g;
+
+            simTime += dt * 0.8; // 0.8x speed for clear observation
+
+            if (simTime >= tTotal) {
+                simTime = tTotal;
+                isRunning = false;
+                btnFire.textContent = '다시 발사';
+            }
+
+            draw();
+
+            if (isRunning) {
+                animationFrameId = requestAnimationFrame(animate);
+            }
+        }
+
+        function drawArrow(fromX, fromY, toX, toY, color, label) {
+            const headLength = 10;
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const len = Math.hypot(dx, dy);
+            if (len < 2) return; // do not draw tiny arrow
+            const angle = Math.atan2(dy, dx);
+
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2.5;
+
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+
+            if (label) {
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillText(label, toX + 8 * Math.cos(angle), toY + 8 * Math.sin(angle));
+            }
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            const rad = angleDeg * Math.PI / 180;
+            const v0x = v0 * Math.cos(rad);
+            const v0y = v0 * Math.sin(rad);
+
+            const hMax = (v0y * v0y) / (2 * g); // 최고점 높이 (m)
+            const R = (v0 * v0 * Math.sin(2 * rad)) / g; // 수평 도달 거리 (m)
+            const tTotal = (2 * v0y) / g; // 최고점 시간 * 2
+
+            // Current state
+            const t = simTime;
+            const currX = v0x * t;
+            const currY = v0y * t - 0.5 * g * t * t;
+            const currVx = v0x;
+            const currVy = v0y - g * t;
+
+            // Draw Ground & Grid
+            ctx.save();
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            for (let y = originY; y > 0; y -= 50) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+            }
+            for (let x = originX; x < width; x += 50) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+            }
+
+            // Draw Ground Line
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10, originY);
+            ctx.lineTo(width - 10, originY);
+            ctx.stroke();
+
+            // Ground hatching
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 1;
+            for (let x = 10; x < width - 10; x += 15) {
+                ctx.beginPath();
+                ctx.moveTo(x, originY);
+                ctx.lineTo(x - 8, originY + 8);
+                ctx.stroke();
+            }
+
+            // Trajectory Line (Full Trajectory Ghost)
+            ctx.save();
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            const step = tTotal / 100;
+            for (let i = 0; i <= 100; i++) {
+                const ti = i * step;
+                const xi = v0x * ti;
+                const yi = v0y * ti - 0.5 * g * ti * ti;
+                const px = originX + xi * scale;
+                const py = originY - yi * scale;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+            ctx.restore();
+
+            // Highest point marker
+            const hMaxPx = { x: originX + (R / 2) * scale, y: originY - hMax * scale };
+            ctx.save();
+            ctx.strokeStyle = '#16a34a';
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(hMaxPx.x, originY);
+            ctx.lineTo(hMaxPx.x, hMaxPx.y);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.fillStyle = '#16a34a';
+            ctx.beginPath();
+            ctx.arc(hMaxPx.x, hMaxPx.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.font = '11px sans-serif';
+            ctx.fillText(`최고점 (${hMax.toFixed(1)}m)`, hMaxPx.x - 30, hMaxPx.y - 10);
+
+            // Max distance marker
+            const rPx = { x: originX + R * scale, y: originY };
+            ctx.fillStyle = '#0284c7';
+            ctx.beginPath();
+            ctx.arc(rPx.x, rPx.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillText(`도달거리 (${R.toFixed(1)}m)`, rPx.x - 35, rPx.y + 20);
+
+            // Active Object Position
+            const objPx = { x: originX + currX * scale, y: originY - Math.max(0, currY) * scale };
+
+            // Draw Vector Arrows at current object position
+            const vScale = 1.2; // vector visual scale
+            // Vx (Horizontal)
+            drawArrow(objPx.x, objPx.y, objPx.x + currVx * vScale, objPx.y, '#ea580c', 'v_x');
+            // Vy (Vertical) - Canvas Y is inverted
+            drawArrow(objPx.x, objPx.y, objPx.x, objPx.y - currVy * vScale, '#9333ea', 'v_y');
+
+            // Draw Projectile Object
+            ctx.fillStyle = '#2563eb';
+            ctx.beginPath();
+            ctx.arc(objPx.x, objPx.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            // Origin Label
+            ctx.fillStyle = '#475569';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('(0,0)', originX - 25, originY + 18);
+
+            updateDashboard(currVx, currVy, hMax, R, t, tTotal);
+        }
+
+        function updateDashboard(vx, vy, hMax, R, t, tTotal) {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.innerHTML = `
+                <div class="card card-vx">
+                    <div class="card-title">수평 속도 (v_x)</div>
+                    <div class="card-value">${vx.toFixed(1)} m/s</div>
+                    <div class="card-sub">등속 운동 (v₀ cosθ)</div>
+                </div>
+                <div class="card card-vy">
+                    <div class="card-title">연직 속도 (v_y)</div>
+                    <div class="card-value">${vy.toFixed(1)} m/s</div>
+                    <div class="card-sub">가속도 운동 (v₀ sinθ - gt)</div>
+                </div>
+                <div class="card card-hmax">
+                    <div class="card-title">최고점 높이 (H_max)</div>
+                    <div class="card-value">${hMax.toFixed(1)} m</div>
+                    <div class="card-sub">v₀² sin²θ / 2g</div>
+                </div>
+                <div class="card card-range">
+                    <div class="card-title">수평 도달 거리 (R)</div>
+                    <div class="card-value">${R.toFixed(1)} m</div>
+                    <div class="card-sub">v₀² sin(2θ) / g</div>
+                </div>
+                <div class="card card-time">
+                    <div class="card-title">경과 / 전체 시간</div>
+                    <div class="card-value">${t.toFixed(2)}s / ${tTotal.toFixed(2)}s</div>
+                    <div class="card-sub">최고점 도달: ${(tTotal/2).toFixed(2)}s</div>
+                </div>
+            `;
+        }
+
+        resizeCanvas();
+    </script>
+</body>
+</html>
